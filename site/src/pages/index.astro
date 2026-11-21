@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import SkillCard from '../components/SkillCard.astro';
+import CopyCommand from '../components/CopyCommand.astro';
+import { getSkills, commands, config } from '../lib/skills';
+const skills = getSkills();
+---
+<Base>
+  <section class="hero">
+    <h1>{config.title}</h1>
+    <p class="lead">{config.tagline}</p>
+    <CopyCommand label="Instalar todos" command={commands.all()} />
+    <p class="hint">Requiere Node 18+. El CLI te pregunta en qué agente instalar (Claude Code, Cursor, Codex…).</p>
+  </section>
+
+  <section class="catalog">
+    <div class="catalog-head">
+      <h2>{skills.length} skills</h2>
+      <input id="search" type="search" placeholder="Buscar skills…" aria-label="Buscar skills" autocomplete="off" />
+    </div>
+    <div class="grid" id="grid">
+      {skills.map((s) => <SkillCard skill={s} />)}
+    </div>
+    <p id="empty" class="empty" hidden>Ningún skill coincide con la búsqueda.</p>
+  </section>
+
+  <script>
+    const input = document.getElementById('search') as HTMLInputElement;
+    const cards = [...document.querySelectorAll<HTMLElement>('#grid .card')];
+    const empty = document.getElementById('empty')!;
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      let shown = 0;
+      for (const c of cards) {
+        const hit = !q || c.dataset.search!.includes(q);
+        c.hidden = !hit;
+        if (hit) shown++;
+      }
+      empty.hidden = shown > 0;
+    });
+  </script>
+</Base>

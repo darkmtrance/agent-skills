@@ -1,0 +1,19 @@
+---
+import type { Skill } from '../lib/skills';
+import { shortDescription } from '../lib/skills';
+interface Props { skill: Skill }
+const { skill } = Astro.props;
+const href = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/skills/${skill.name}/`;
+---
+<a class="card" href={href} data-search={`${skill.name} ${skill.description}`.toLowerCase()}>
+  <div class="card-head">
+    <h3>{skill.name}</h3>
+    {skill.version && <span class="pill">v{skill.version}</span>}
+  </div>
+  <p>{shortDescription(skill.description)}</p>
+  <div class="card-meta">
+    {skill.license && <span>{skill.license}</span>}
+    <span>{skill.fileCount} archivos</span>
+    {skill.author && <span>por {skill.author}</span>}
+  </div>
+</a>

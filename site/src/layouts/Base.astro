@@ -1,0 +1,53 @@
+---
+import '../styles/global.css';
+import { config, githubUrl } from '../lib/skills';
+interface Props { title?: string; description?: string }
+const { title, description = config.tagline } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <title>{title ? `${title} · ${config.title}` : config.title}</title>
+    <script is:inline>
+      document.documentElement.dataset.theme =
+        localStorage.getItem('theme') ?? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={`${base}/`}><span class="brand-mark">/</span>{config.title}</a>
+      <nav>
+        <a href={githubUrl()} target="_blank" rel="noopener">GitHub</a>
+        <button type="button" id="theme-toggle" aria-label="Cambiar tema">◐</button>
+      </nav>
+    </header>
+    <main><slot /></main>
+    <footer class="site-footer">
+      Cada skill conserva su licencia y autoría originales. La instalación usa el CLI
+      <a href="https://www.npmjs.com/package/skills" target="_blank" rel="noopener">skills</a>.
+    </footer>
+    <script>
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('theme', next);
+      });
+      document.addEventListener('click', async (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-copy]');
+        if (!btn) return;
+        await navigator.clipboard.writeText(btn.dataset.copy!);
+        btn.textContent = '¡Copiado!';
+        btn.classList.add('done');
+        setTimeout(() => {
+          btn.textContent = 'Copiar';
+          btn.classList.remove('done');
+        }, 1600);
+      });
+    </script>
+  </body>
+</html>

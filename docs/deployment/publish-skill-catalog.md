@@ -42,8 +42,11 @@ No agregues un skill solo dentro de `site/dist/` ni mantengas otra copia de su `
 
 ## En el código
 
-- [`README.md`](../../README.md): describe cómo agregar favoritos y desarrollar el sitio localmente.
+- [`README.md`](../../README.md): describe cómo agregar favoritos, sincronizar externos y desarrollar el sitio localmente.
 - [`skills.config.json`](../../skills.config.json): configura el repositorio, la rama y el texto del catálogo.
+- [`skills.sources.json`](../../skills.sources.json): declara los repositorios origen de los skills externos.
+- [`scripts/sync-skills.mjs`](../../scripts/sync-skills.mjs): sincroniza `skills/<nombre>/` desde los repositorios declarados en `skills.sources.json`.
+- [`.github/workflows/sync-skills.yml`](../../.github/workflows/sync-skills.yml): ejecuta la sincronización semanal o manual y abre un Pull Request si hay cambios.
 - [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml): regenera el sitio y lo publica al cambiar `main`.
 - [`site/src/lib/skills.ts`](../../site/src/lib/skills.ts): lee las carpetas de `skills/` y genera los datos del catálogo.
 

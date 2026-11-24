@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 
 const ROOT = join(process.cwd(), '..');
 const SKILLS_DIR = join(ROOT, 'skills');
+const SOURCES_PATH = join(ROOT, 'skills.sources.json');
 
 export const config = JSON.parse(readFileSync(join(ROOT, 'skills.config.json'), 'utf8')) as {
   repo: string;
@@ -12,12 +13,35 @@ export const config = JSON.parse(readFileSync(join(ROOT, 'skills.config.json'), 
   tagline: string;
 };
 
+export interface SkillSource {
+  repo: string;
+  branch?: string;
+  path?: string;
+  url: string;
+}
+
+type SourcesManifest = Record<string, { repo: string; branch?: string; path?: string }>;
+
+const sourcesManifest: SourcesManifest = existsSync(SOURCES_PATH)
+  ? JSON.parse(readFileSync(SOURCES_PATH, 'utf8'))
+  : {};
+
+function resolveSource(name: string): SkillSource | undefined {
+  const entry = sourcesManifest[name];
+  if (!entry?.repo) return undefined;
+  const url = /^https?:\/\//i.test(entry.repo)
+    ? entry.repo.replace(/\.git$/, '')
+    : `https://github.com/${entry.repo}`;
+  return { repo: entry.repo, branch: entry.branch, path: entry.path, url };
+}
+
 export interface Skill {
   name: string;
   description: string;
   version?: string;
   license?: string;
   author?: string;
+  source?: SkillSource;
   body: string;
   files: string[];
   fileCount: number;
@@ -59,6 +83,7 @@ export function getSkills(): Skill[] {
         version: data.version ?? data.metadata?.version,
         license: data.license,
         author: data.author ?? data.metadata?.author,
+        source: resolveSource(data.name),
         body: content,
         files: top,
         fileCount: sizes.length,

@@ -30,6 +30,12 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         {skill.version && (<><dt>Versión</dt><dd>{skill.version}</dd></>)}
         {skill.license && (<><dt>Licencia</dt><dd>{skill.license}</dd></>)}
         {skill.author && (<><dt>Autor</dt><dd>{skill.author}</dd></>)}
+        {skill.source && (
+          <>
+            <dt>Origen</dt>
+            <dd><a href={skill.source.url} target="_blank" rel="noopener">{skill.source.repo}</a></dd>
+          </>
+        )}
         <dt>Tamaño</dt><dd>{skill.fileCount} archivos · {skill.sizeKB.toLocaleString('es')} KB</dd>
       </dl>
       <h2>Contenido</h2>

@@ -1,0 +1,58 @@
+name: Sync external skills
+
+on:
+  schedule:
+    # Todos los lunes a las 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: 'Nombre de un skill específico (vacío = todos los declarados en skills.sources.json)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-skills
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Sincronizar skills externos
+        env:
+          TARGET_SKILL: ${{ inputs.skill }}
+        run: |
+          if [ -n "$TARGET_SKILL" ]; then
+            node scripts/sync-skills.mjs --summary-file "${RUNNER_TEMP}/sync-summary.md" "$TARGET_SKILL"
+          else
+            node scripts/sync-skills.mjs --summary-file "${RUNNER_TEMP}/sync-summary.md"
+          fi
+
+      - name: Verificar build del catálogo
+        working-directory: site
+        run: |
+          npm ci
+          npm run build
+
+      - name: Crear Pull Request si hay cambios
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/sync-external-skills
+          delete-branch: true
+          commit-message: 'chore(skills): sincronizar skills externos'
+          title: 'chore(skills): actualizar skills externos'
+          body-path: ${{ runner.temp }}/sync-summary.md
+          labels: automated,skills

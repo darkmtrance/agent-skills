@@ -26,8 +26,26 @@ npx skills add darkmtrance/agent-skills
 ## Agregar un favorito
 
 1. Copia la carpeta del skill a `skills/<nombre>/`. El `name` del frontmatter del `SKILL.md` tiene que coincidir con el nombre de la carpeta.
-2. Conserva el LICENSE y la autoría originales.
-3. Haz commit y push a `main`. GitHub Actions regenera y publica el sitio.
+2. Si proviene de un repositorio externo, regístralo en `skills.sources.json` (con `repo`, opcionalmente `branch` y `path`) para que se sincronice automáticamente.
+3. Conserva el LICENSE y la autoría originales.
+4. Haz commit y push a `main`. GitHub Actions regenera y publica el sitio.
+
+## Sincronizar skills externos
+
+Los skills declarados en `skills.sources.json` se actualizan mediante `scripts/sync-skills.mjs`:
+
+```bash
+# comprobar si hay cambios sin escribir archivos
+node scripts/sync-skills.mjs --dry-run
+
+# sincronizar todos los skills externos
+node scripts/sync-skills.mjs
+
+# sincronizar uno específico
+node scripts/sync-skills.mjs archify
+```
+
+En GitHub, el workflow [`.github/workflows/sync-skills.yml`](.github/workflows/sync-skills.yml) ejecuta esta sincronización todos los lunes (y bajo demanda con `workflow_dispatch`), verifica que el sitio compile y abre un Pull Request si detecta cambios. Para que pueda crear PRs, habilita en GitHub **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests**.
 
 ## Desarrollo local
 

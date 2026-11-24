@@ -1,0 +1,10 @@
+{
+  "archify": {
+    "repo": "tt-a1i/archify",
+    "branch": "main"
+  },
+  "impeccable": {
+    "repo": "pbakaus/impeccable",
+    "branch": "main"
+  }
+}

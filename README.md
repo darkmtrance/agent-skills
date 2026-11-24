@@ -69,5 +69,6 @@ Para el primer deploy, en GitHub ve a **Settings → Pages → Source: GitHub Ac
 | archify | tt-a1i | Apache-2.0 (ver `skills/archify/LICENSE`, `NOTICE`) |
 | impeccable | pbakaus | Apache 2.0 |
 | security-audit | Cloudflare | ver repo origen (`cloudflare/security-audit-skill`) |
+| confluent-skill-reviewer | Confluent | ver repo origen (`confluentinc/agent-skills`) |
 | create-doc | propio (inspirado en CodelyTV/agent-harness, MIT) | MIT |
 | organize-docs | propio | MIT |

@@ -11,5 +11,10 @@
     "repo": "cloudflare/security-audit-skill",
     "branch": "main",
     "path": "skills/security-audit"
+  },
+  "confluent-skill-reviewer": {
+    "repo": "confluentinc/agent-skills",
+    "branch": "main",
+    "path": "skills/confluent-skill-reviewer"
   }
 }

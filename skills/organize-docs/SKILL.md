@@ -5,7 +5,9 @@ license: MIT
 user-invocable: true
 argument-hint: "[carpeta o archivos a ordenar, por defecto todo el repo]"
 metadata:
-  version: "1.1"
+  author: darkmtrance
+  version: "1.2.0"
+  last_updated: "2026-11-24"
 ---
 
 # Ordenar la documentación existente
@@ -65,7 +67,7 @@ Espera la aprobación. El usuario puede aprobar todo o solo algunas filas.
 Sigue este orden, para que los enlaces se puedan rastrear:
 
 1. `git mv` de los archivos que se mueven o se renombran.
-2. Dividir los monolíticos: crea un archivo por tema con la plantilla de [`../create-doc/references/plantilla.md`](../create-doc/references/plantilla.md). Si este skill se instaló sin `create-doc`, usa la copia de [`references/plantilla.md`](references/plantilla.md). El archivo original se borra solo si todo su contenido quedó repartido.
+2. Dividir los monolíticos: crea un archivo por tema con la plantilla de [`references/plantilla.md`](references/plantilla.md). El archivo original se borra solo si todo su contenido quedó repartido.
 3. Fusionar los duplicados en el destino. Cuando dos ejemplos digan lo mismo, conserva el más completo.
 4. Adaptar a la plantilla los que lo necesiten, sin cambiar lo que dicen.
 5. **Corregir los enlaces**: con el mapa `ruta vieja → ruta nueva`, actualiza todos los enlaces relativos de los `.md` y las referencias en el código (comentarios, configs). Si un enlace apuntaba a una sección de un archivo dividido, haz que apunte al archivo nuevo.

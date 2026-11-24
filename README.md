@@ -67,6 +67,7 @@ Para el primer deploy, en GitHub ve a **Settings → Pages → Source: GitHub Ac
 | Skill | Autor / origen | Licencia |
 |---|---|---|
 | archify | tt-a1i | Apache-2.0 (ver `skills/archify/LICENSE`, `NOTICE`) |
-| impeccable | ver SKILL.md | Apache 2.0 |
+| impeccable | pbakaus | Apache 2.0 |
+| security-audit | Cloudflare | ver repo origen (`cloudflare/security-audit-skill`) |
 | create-doc | propio (inspirado en CodelyTV/agent-harness, MIT) | MIT |
 | organize-docs | propio | MIT |

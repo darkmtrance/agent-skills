@@ -6,5 +6,10 @@
   "impeccable": {
     "repo": "pbakaus/impeccable",
     "branch": "main"
+  },
+  "security-audit": {
+    "repo": "cloudflare/security-audit-skill",
+    "branch": "main",
+    "path": "skills/security-audit"
   }
 }

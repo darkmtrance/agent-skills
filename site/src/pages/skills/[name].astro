@@ -3,12 +3,38 @@ import Base from '../../layouts/Base.astro';
 import CopyCommand from '../../components/CopyCommand.astro';
 import { getSkills, commands, githubUrl, shortDescription, type Skill } from '../../lib/skills';
 import { marked } from 'marked';
+import sanitizeHtml from 'sanitize-html';
 
 export function getStaticPaths() {
   return getSkills().map((skill) => ({ params: { name: skill.name }, props: { skill } }));
 }
 const { skill } = Astro.props as { skill: Skill };
-const html = await marked.parse(skill.body);
+const rawHtml = await marked.parse(skill.body);
+const html = sanitizeHtml(rawHtml, {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+    'h1',
+    'h2',
+    'img',
+    'del',
+    'details',
+    'summary',
+  ]),
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    a: ['href', 'title', 'rel'],
+    img: ['src', 'alt', 'title'],
+    code: ['class'],
+    th: ['align'],
+    td: ['align'],
+  },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  allowedSchemesByTag: {
+    img: ['http', 'https'],
+  },
+  transformTags: {
+    a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer' }),
+  },
+});
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 <Base title={skill.name} description={shortDescription(skill.description)}>

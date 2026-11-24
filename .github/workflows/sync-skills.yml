@@ -11,9 +11,7 @@ on:
         required: false
         default: ''
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: sync-skills
@@ -22,6 +20,9 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +49,8 @@ jobs:
           npm run build
 
       - name: Crear Pull Request si hay cambios
-        uses: peter-evans/create-pull-request@v7
+        # peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
         with:
           branch: chore/sync-external-skills
           delete-branch: true

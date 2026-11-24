@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, lstatSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import matter from 'gray-matter';
 
@@ -52,8 +52,12 @@ function walk(dir: string, out: number[] = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name === '.git') continue;
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) walk(full, out);
-    else out.push(statSync(full).size);
+    const stat = lstatSync(full);
+    if (stat.isSymbolicLink()) {
+      throw new Error(`Enlace simbólico no permitido en el catálogo: ${full}`);
+    }
+    if (stat.isDirectory()) walk(full, out);
+    else if (stat.isFile()) out.push(stat.size);
   }
   return out;
 }

@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -11,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -19,6 +20,25 @@ const ROOT = resolve(__dirname, '..');
 const SKILLS_DIR = join(ROOT, 'skills');
 const SOURCES_PATH = join(ROOT, 'skills.sources.json');
 const IGNORED_ENTRIES = new Set(['.git', 'node_modules', '.DS_Store']);
+const VALID_SKILL_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const EXECUTABLE_EXTS = new Set([
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.cmd',
+  '.bat',
+  '.ps1',
+  '.py',
+  '.rb',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+]);
 
 function parseArgs(argv) {
   const opts = { dryRun: false, summaryFile: null, help: false, skills: [] };
@@ -56,6 +76,35 @@ Ejemplos:
   node scripts/sync-skills.mjs --dry-run`);
 }
 
+function assertInsideDir(rootDir, candidatePath, label) {
+  const rel = relative(resolve(rootDir), resolve(candidatePath));
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new Error(`Ruta fuera del directorio permitido para ${label}: "${candidatePath}"`);
+  }
+}
+
+function validateSourceConfig(name, source) {
+  if (!VALID_SKILL_NAME.test(name)) {
+    throw new Error(`Nombre de skill inválido: "${name}" (solo minúsculas, dígitos y guiones)`);
+  }
+  if (!source?.repo || typeof source.repo !== 'string') {
+    throw new Error(`"${name}" requiere un campo "repo" válido en skills.sources.json`);
+  }
+  if (source.repo.startsWith('-')) {
+    throw new Error(`Valor "repo" inválido para "${name}": no puede empezar con "-"`);
+  }
+  if (source.branch !== undefined) {
+    if (typeof source.branch !== 'string' || !source.branch.trim() || source.branch.startsWith('-')) {
+      throw new Error(`Valor "branch" inválido para "${name}"`);
+    }
+  }
+  if (source.path !== undefined) {
+    if (typeof source.path !== 'string' || isAbsolute(source.path)) {
+      throw new Error(`Valor "path" inválido para "${name}": debe ser relativo`);
+    }
+  }
+}
+
 function parseFrontmatter(markdown) {
   const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return {};
@@ -89,6 +138,9 @@ function parseFrontmatter(markdown) {
 function readSkillMeta(dir) {
   const skillMd = join(dir, 'SKILL.md');
   if (!existsSync(skillMd)) return null;
+  if (lstatSync(skillMd).isSymbolicLink()) {
+    throw new Error(`Se rechazó un enlace simbólico en ${skillMd}`);
+  }
   const fm = parseFrontmatter(readFileSync(skillMd, 'utf8'));
   return {
     name: fm.name || null,
@@ -107,9 +159,26 @@ function repoToWebUrl(repo) {
   return `https://github.com/${repo}`;
 }
 
+function assertNoSymlinks(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (IGNORED_ENTRIES.has(entry.name)) continue;
+    const full = join(dir, entry.name);
+    const lstat = lstatSync(full);
+    if (lstat.isSymbolicLink()) {
+      throw new Error(
+        `El skill origen contiene un enlace simbólico no permitido: "${relative(dir, full)}"`
+      );
+    }
+    if (lstat.isDirectory()) {
+      assertNoSymlinks(full);
+    }
+  }
+}
+
 function findSkillDir(cloneDir, expectedName, explicitPath) {
   if (explicitPath) {
     const candidate = resolve(cloneDir, explicitPath);
+    assertInsideDir(cloneDir, candidate, `path "${explicitPath}"`);
     if (!existsSync(join(candidate, 'SKILL.md'))) {
       throw new Error(`No se encontró SKILL.md en la ruta configurada "${explicitPath}"`);
     }
@@ -134,6 +203,7 @@ function findSkillDir(cloneDir, expectedName, explicitPath) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (IGNORED_ENTRIES.has(entry.name)) continue;
       const full = join(dir, entry.name);
+      if (lstatSync(full).isSymbolicLink()) continue;
       if (entry.isDirectory()) {
         const meta = readSkillMeta(full);
         if (meta && meta.name === expectedName) matches.push(full);
@@ -160,9 +230,13 @@ function collectFiles(dir, baseDir = dir, map = new Map()) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (IGNORED_ENTRIES.has(entry.name)) continue;
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
+    const lstat = lstatSync(full);
+    if (lstat.isSymbolicLink()) {
+      throw new Error(`Enlace simbólico no permitido en "${relative(baseDir, full)}"`);
+    }
+    if (lstat.isDirectory()) {
       collectFiles(full, baseDir, map);
-    } else if (entry.isFile()) {
+    } else if (lstat.isFile()) {
       const rel = relative(baseDir, full).replaceAll('\\', '/');
       map.set(rel, full);
     }
@@ -170,31 +244,53 @@ function collectFiles(dir, baseDir = dir, map = new Map()) {
   return map;
 }
 
-function directoriesDiffer(sourceDir, targetDir) {
-  if (!existsSync(targetDir)) return true;
-  const srcFiles = collectFiles(sourceDir);
-  const dstFiles = collectFiles(targetDir);
-  if (srcFiles.size !== dstFiles.size) return true;
-
-  for (const [rel, srcPath] of srcFiles) {
-    const dstPath = dstFiles.get(rel);
-    if (!dstPath) return true;
-    if (statSync(srcPath).size !== statSync(dstPath).size) return true;
-    if (!readFileSync(srcPath).equals(readFileSync(dstPath))) return true;
+function isExecutableFile(relPath, fullPath) {
+  const ext = extname(relPath).toLowerCase();
+  if (EXECUTABLE_EXTS.has(ext)) return true;
+  if (relPath.startsWith('bin/') || relPath.startsWith('scripts/')) {
+    const head = readFileSync(fullPath).subarray(0, 2).toString('utf8');
+    if (head === '#!') return true;
   }
   return false;
 }
 
+function diffDirectories(sourceDir, targetDir) {
+  const srcFiles = collectFiles(sourceDir);
+  const dstFiles = existsSync(targetDir) ? collectFiles(targetDir) : new Map();
+  let changed = !existsSync(targetDir) || srcFiles.size !== dstFiles.size;
+  const changedExecutables = [];
+
+  for (const [rel, srcPath] of srcFiles) {
+    const dstPath = dstFiles.get(rel);
+    const fileChanged =
+      !dstPath ||
+      statSync(srcPath).size !== statSync(dstPath).size ||
+      !readFileSync(srcPath).equals(readFileSync(dstPath));
+
+    if (fileChanged) {
+      changed = true;
+      if (isExecutableFile(rel, srcPath)) {
+        changedExecutables.push(rel);
+      }
+    }
+  }
+
+  return { changed, changedExecutables: changedExecutables.sort() };
+}
+
 function syncOne(name, source, { dryRun }) {
+  validateSourceConfig(name, source);
   const targetDir = join(SKILLS_DIR, name);
+  assertInsideDir(SKILLS_DIR, targetDir, `skill "${name}"`);
+
   const prevMeta = readSkillMeta(targetDir);
   const cloneRoot = mkdtempSync(join(tmpdir(), `skill-sync-${name}-`));
 
   try {
     const cloneUrl = repoToCloneUrl(source.repo);
-    const args = ['clone', '--depth', '1'];
+    const args = ['clone', '-c', 'core.symlinks=false', '--depth', '1'];
     if (source.branch) args.push('--branch', source.branch);
-    args.push(cloneUrl, cloneRoot);
+    args.push('--', cloneUrl, cloneRoot);
 
     execFileSync('git', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     const commit = execFileSync('git', ['-C', cloneRoot, 'rev-parse', 'HEAD'], {
@@ -203,6 +299,9 @@ function syncOne(name, source, { dryRun }) {
 
     const upstreamName = source.skillName || name;
     const sourceDir = findSkillDir(cloneRoot, upstreamName, source.path);
+    assertInsideDir(cloneRoot, sourceDir, `sourceDir de "${name}"`);
+    assertNoSymlinks(sourceDir);
+
     const nextMeta = readSkillMeta(sourceDir);
 
     if (!nextMeta?.name || !nextMeta?.description) {
@@ -214,7 +313,7 @@ function syncOne(name, source, { dryRun }) {
       );
     }
 
-    const changed = directoriesDiffer(sourceDir, targetDir);
+    const { changed, changedExecutables } = diffDirectories(sourceDir, targetDir);
     const status = !prevMeta ? 'added' : changed ? 'updated' : 'unchanged';
 
     if (changed && !dryRun) {
@@ -223,7 +322,11 @@ function syncOne(name, source, { dryRun }) {
         recursive: true,
         filter: (src) => {
           const base = src.split(/[\\/]/).pop();
-          return !IGNORED_ENTRIES.has(base);
+          if (IGNORED_ENTRIES.has(base)) return false;
+          if (lstatSync(src).isSymbolicLink()) {
+            throw new Error(`Enlace simbólico rechazado durante la copia: "${src}"`);
+          }
+          return true;
         },
       });
     }
@@ -237,6 +340,7 @@ function syncOne(name, source, { dryRun }) {
       prevVersion: prevMeta?.version || '-',
       nextVersion: nextMeta.version || '-',
       status,
+      changedExecutables,
     };
   } finally {
     rmSync(cloneRoot, { recursive: true, force: true });
@@ -272,6 +376,22 @@ function buildMarkdownSummary(results) {
       ? `Skills con cambios: ${updated.map((r) => `\`${r.name}\``).join(', ')}.`
       : 'Todos los skills externos ya están al día.'
   );
+
+  const execAlerts = updated.filter((r) => r.changedExecutables.length > 0);
+  if (execAlerts.length > 0) {
+    lines.push('');
+    lines.push('### ⚠️ Archivos ejecutables o scripts modificados (revisar antes de hacer merge)');
+    lines.push('');
+    for (const r of execAlerts) {
+      const sample = r.changedExecutables.slice(0, 15).map((f) => `\`${f}\``).join(', ');
+      const extra =
+        r.changedExecutables.length > 15
+          ? ` (+${r.changedExecutables.length - 15} más)`
+          : '';
+      lines.push(`- **\`${r.name}\`** (${r.changedExecutables.length}): ${sample}${extra}`);
+    }
+  }
+
   return lines.join('\n') + '\n';
 }
 

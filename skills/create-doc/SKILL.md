@@ -1,11 +1,13 @@
 ---
 name: create-doc
-description: "Documenta una convención del equipo como un archivo Markdown independiente en docs/<categoría>/, a partir de la conversación actual: cuando el usuario corrigió tu implementación por una regla no escrita ('aquí no lo hacemos así', 'usa X en vez de Y', 'siempre…', 'nunca…'), o cuando pide 'documenta esto', 'deja esto como convención', 'agrega una regla al AGENTS.md' o 'que no vuelva a pasar'. También sirve sin conversación previa, a partir de una descripción y del código existente. No usar para READMEs, documentación de API ni guías para usuarios finales."
+description: "Documenta una convención del equipo como un archivo Markdown independiente en docs/<categoría>/, a partir de la conversación actual: cuando el usuario corrigió tu implementación por una regla no escrita ('aquí no lo hacemos así', 'usa X en vez de Y', 'siempre…', 'nunca…'), o cuando pide 'documenta esto', 'deja esto como convención', 'agrega una regla al AGENTS.md' o 'que no vuelva a pasar'. También sirve sin conversación previa, a partir de una descripción y del código existente. No usar para READMEs, documentación de API, guías para usuarios finales ni para reorganizar documentación ya existente (para eso usa organize-docs)."
 license: MIT
 user-invocable: true
 argument-hint: "[descripción opcional de la convención]"
 metadata:
-  version: "1.0"
+  author: darkmtrance
+  version: "1.1.0"
+  last_updated: "2026-11-25"
   inspired-by: "CodelyTV/agent-harness create-doc (MIT)"
 ---
 
@@ -59,6 +61,7 @@ Sigue la plantilla y las reglas de [`references/plantilla.md`](references/planti
 
 - Agrega una línea al índice de docs en `AGENTS.md` (o `CLAUDE.md`, el que use el proyecto): `- [Título](docs/categoría/archivo.md): una frase sobre cuándo aplica`.
 - Si no hay índice, crea una sección `## Docs` al final de `AGENTS.md`.
+- Si el repo ya tiene `.github/copilot-instructions.md` con sección `## Docs`, sincroniza también esa línea (usando ruta `../docs/categoría/archivo.md`).
 
 ### 6. Cerrar
 
